@@ -128,7 +128,7 @@ struct SettingsView: View {
                 Section(header:Text("ライセンス・出典")) {
                     NavigationLink("非商用ライセンスと第三者の権利") { LegalView() }
                 }
-                Section { Text("RoomCanvas 0.10.2 · iPadOS 15以降\n時刻はiPadのタイムゾーンを使用します。カレンダーは60秒ごとに端末内の予定を読み直します。Google側との同期頻度はiPadの設定に依存します。").font(.caption).foregroundColor(.secondary) }
+                Section { Text("RoomCanvas 0.10.3 · iPadOS 15以降\n時刻はiPadのタイムゾーンを使用します。カレンダーは60秒ごとに端末内の予定を読み直します。Google側との同期頻度はiPadの設定に依存します。").font(.caption).foregroundColor(.secondary) }
             }.navigationTitle("ディスプレイ設定").toolbar { ToolbarItem(placement: .confirmationAction) { Button("完了") { dismiss() } } }
         }.navigationViewStyle(.stack).sheet(item: $favoriteDevice) { device in DeviceControlView(device: device, registrationOnly: true, devices: devices) }
         .sheet(isPresented: $showBLE) { RemoteCallSettingsView(remote: ble) }

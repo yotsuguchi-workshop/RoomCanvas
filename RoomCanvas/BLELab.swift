@@ -224,7 +224,7 @@ struct BLELabView: View {
                                 Text("\(item.name)  \(item.rssi) dBm  受信\(item.count)回").foregroundColor(lab.target == item.id ? .mint:.white)
                                 Text(item.id).font(.caption2)
                                 Text("UUID: \(item.services.joined(separator:", "))").font(.caption)
-                                Text("製造者: \(item.manufacturer)\nサービス: \(item.serviceData.sorted(by: { $0.key < $1.key }).map { "\($0.key)=\($0.value)" }.joined(separator:" / "))").font(.system(size:11,design:.monospaced)).lineLimit(4)
+                                Text("製造者: \(item.manufacturer)\nサービス: \(item.serviceData.sorted(by: { $0.key < $1.key }).map { "\($0.key)=\($0.value)" }.joined(separator:" / "))").font(.system(size:11)).lineLimit(4)
                             }
                         }.buttonStyle(.plain)
                     }

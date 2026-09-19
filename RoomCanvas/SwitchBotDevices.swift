@@ -89,6 +89,15 @@ struct FavoriteAction: Identifiable, Codable {
     @Published var airCommands: [String: AirCommand] = (UserDefaults.standard.data(forKey: "sbAirCommands").flatMap { try? JSONDecoder().decode([String:AirCommand].self, from: $0) }) ?? [:]
     var air: SBDevice? { devices.first { $0.id == airID && $0.type == "Air Conditioner" } ?? devices.first { $0.type == "Air Conditioner" } }
     func selectAir(_ id: String) { airID = id; UserDefaults.standard.set(id, forKey: "sbAir") }
+    func powerState(_ id: String, now: Date = Date()) -> Bool? {
+        guard let device = devices.first(where: { $0.id == id }), device.supportsStatus,
+              device.cloud, errors[id] == nil, let status = states[id],
+              demo || now.timeIntervalSince(status.updated) < 180 else { return nil }
+        switch status.power?.lowercased() { case "on": return true; case "off": return false; default: return nil }
+    }
+    func refreshPowerStates() async {
+        for device in devices where device.powerOnly { await refreshStatus(device) }
+    }
     func airSummary(_ device: SBDevice) -> String {
         guard let command = airCommands[device.id] else { return "エアコン · このアプリからは未送信" }
         return "送信済：" + command.summary
@@ -110,7 +119,7 @@ struct FavoriteAction: Identifiable, Codable {
     func selectSensor(_ device: SBDevice) { sensorID = device.id; UserDefaults.standard.set(device.id, forKey: "sbSensor") }
     func summary(_ device: SBDevice) -> String {
         if let error = errors[device.id] { return error }
-        if device.infrared { return "赤外線 · 実状態は取得できません" }
+        if device.infrared { return device.type == "Air Conditioner" ? airSummary(device) : "赤外線 · 実状態は取得できません" }
         if !device.cloud { return "クラウドサービスが無効です" }
         if let status = states[device.id] { return status.summary }
         return device.supportsStatus ? "状態未取得" : "APIでの個別操作は未対応"
@@ -206,6 +215,7 @@ struct AirCommand: Codable {
     var power: String?
     var updated = Date()
     var summary: String {
+        guard power == "on" else { return power == "off" ? "OFF" : "状態不明" }
         let modes = [1:"自動",2:"冷房",3:"除湿",4:"送風",5:"暖房"], fans = [1:"自動",2:"弱",3:"中",4:"強"]
         return "\(power == "on" ? "ON" : power == "off" ? "OFF" : "—") · \(mode.flatMap { modes[$0] } ?? "モード—") \(temperature.map { "\($0)°C" } ?? "—°C") · 風量\(fan.flatMap { fans[$0] } ?? "—")"
     }

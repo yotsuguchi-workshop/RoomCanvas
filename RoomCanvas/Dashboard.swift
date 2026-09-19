@@ -79,7 +79,7 @@ struct Dashboard: View {
             UIApplication.shared.isIdleTimerDisabled = true
             await refresh(); await weather.refresh(requestPermission:true); await holidays.update()
         }
-        .onReceive(timer) { _ in Task { await store.refreshCalendar(); if page == 1 && !outside { await devices.refreshSensor() }; await weather.refresh() } }
+        .onReceive(timer) { _ in Task { await store.refreshCalendar(); if !outside { await devices.refreshPowerStates(); if page == 1 { await devices.refreshSensor() } }; await weather.refresh() } }
         .onReceive(NotificationCenter.default.publisher(for:.EKEventStoreChanged).debounce(for:.milliseconds(500),scheduler:RunLoop.main)) { _ in Task { await store.refreshCalendar() } }
         .onChange(of:phase) { value in ble.setPhase(value); UIApplication.shared.isIdleTimerDisabled = value == .active; if value == .active { Task { await refresh(); await weather.refresh() } } }
         .onChange(of:outside) { _ in page = 1; detail = nil }
@@ -138,7 +138,7 @@ struct Dashboard: View {
                     Button { detail = .clock } label: {
                         VStack(alignment:.leading,spacing:3) {
                             Text(now.formatted(.dateTime.month().day().weekday(.wide).locale(Locale(identifier:"ja_JP")))).font(.system(size:20)).foregroundColor(holidays.color(now))
-                            Text(RoomCalendar.clock(now)).font(.system(size:68,weight:.light,design:.rounded)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+                            Text(RoomCalendar.clock(now)).font(.system(size:68,weight:.light)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
                         }.frame(maxWidth:.infinity,alignment:.leading)
                     }.buttonStyle(.plain)
                 }
@@ -154,16 +154,14 @@ struct Dashboard: View {
                 Button { page = 0 } label: { HStack { Text("部屋の操作").font(.headline); Spacer(); Image(systemName:"arrow.up.right") } }.buttonStyle(.plain)
                 HStack(alignment:.firstTextBaseline,spacing:14) {
                     if let sensor = devices.sensor, let state = devices.states[sensor.id] {
-                        Button { sheet = .device(sensor) } label: { Text(state.temperature.map { String(format:"%.1f°C",$0) } ?? "—°C").font(.system(size:52,weight:.light,design:.rounded)).minimumScaleFactor(0.6).lineLimit(1) }.buttonStyle(.plain)
+                        Button { sheet = .device(sensor) } label: { Text(state.temperature.map { String(format:"%.1f°C",$0) } ?? "—°C").font(.system(size:52,weight:.light)).minimumScaleFactor(0.6).lineLimit(1) }.buttonStyle(.plain)
                         Text("湿度 " + (state.humidity.map { String(format:"%.0f%%",$0) } ?? "—%")).font(.system(size:23)).lineLimit(1)
                     } else { Text("—°C").font(.system(size:52,weight:.light)); Text("湿度 —%").font(.title3) }
                 }.foregroundColor(.mint)
                 if let air = devices.air {
                     Button { sheet = .device(air) } label: {
-                        VStack(alignment:.leading,spacing:2) {
-                            Text(devices.airSummary(air)).font(.system(size:14)).lineLimit(1).minimumScaleFactor(0.8)
-                            Text("赤外線 · 実状態は取得不可").font(.system(size:11)).foregroundColor(.secondaryInk)
-                        }.frame(maxWidth:.infinity,alignment:.leading)
+                        AirStateView(devices:devices,device:air)
+                            .frame(maxWidth:.infinity,alignment:.leading)
                     }.buttonStyle(.plain)
                 } else { Text("エアコン未登録").font(.caption).foregroundColor(.secondaryInk) }
                 if devices.favorites.isEmpty {
@@ -174,7 +172,12 @@ struct Dashboard: View {
                             Button { Task { await devices.runFavorite(favorite) } } label: {
                                 VStack(spacing:2) {
                                     Text(favorite.deviceName).font(.system(size:11)).foregroundColor(.secondaryInk).lineLimit(1)
-                                    Text(favorite.action.label).font(.system(size:14,weight:.medium)).lineLimit(1).minimumScaleFactor(0.65)
+                                    HStack(spacing:5) {
+                                        if favorite.action.command == "__togglePower" && !favorite.action.custom {
+                                            PowerStateIcon(value:devices.powerState(favorite.deviceID))
+                                        }
+                                        Text(favorite.action.label).font(.system(size:14,weight:.medium)).lineLimit(1).minimumScaleFactor(0.65)
+                                    }
                                 }.frame(maxWidth:.infinity,minHeight:37).padding(.horizontal,5).background(Color.white.opacity(0.07)).cornerRadius(10)
                             }.buttonStyle(.plain).disabled(devices.toggling || devices.executing != nil)
                         }
@@ -260,7 +263,7 @@ struct ClockScreen: View {
             DeviceClockView { now in
                 VStack(spacing:16) {
                     Text(now.formatted(.dateTime.year().month().day().weekday(.wide).locale(Locale(identifier:"ja_JP")))).font(.system(size:30)).foregroundColor(holidays.color(now))
-                    Text(RoomCalendar.clock(now)).font(.system(size:area.size.width*0.15,weight:.ultraLight,design:.rounded)).monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                    Text(RoomCalendar.clock(now)).font(.system(size:area.size.width*0.15,weight:.ultraLight)).monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                 }
             }
             Spacer(); Button("閉じる") { dismiss() }.padding(16).background(Color.panel).cornerRadius(12)

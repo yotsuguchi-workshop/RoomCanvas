@@ -24,7 +24,7 @@ struct DeviceBrowser: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Button { if device.powerOnly { Task { await devices.togglePower(device) } } else { selected = device } } label: {
                                     VStack(alignment: .leading, spacing: 7) {
-                                        HStack { Image(systemName: device.icon).font(.system(size: 24)).foregroundColor(device.sensor ? .mint : .sand); Spacer(); if devices.favoriteIDs.contains(device.id) { Image(systemName: "star.fill").foregroundColor(.sand) } }
+                                        HStack { Image(systemName: device.icon).font(.system(size: 24)).foregroundColor(device.sensor ? .mint : .sand); Spacer(); if device.powerOnly { PowerStateIcon(value:devices.powerState(device.id)) }; if devices.favoriteIDs.contains(device.id) { Image(systemName: "star.fill").foregroundColor(.sand) } }
                                         Text(device.name).font(.system(size: 21, weight: .semibold)).lineLimit(1)
                                         Text(devices.summary(device)).font(.system(size: 13)).foregroundColor(.secondaryInk).lineLimit(2)
                                         Spacer(minLength: 0)
@@ -141,6 +141,7 @@ struct DeviceControlView: View {
     private var airConditioner: some View {
         Card {
             VStack(spacing: 12) {
+                AirStateView(devices:devices,device:device).frame(maxWidth:.infinity,alignment:.leading)
                 Text("送信する設定").font(.headline).foregroundColor(.secondaryInk)
                 Stepper("設定温度  \(temperature)°C", value: $temperature, in: 16...30).font(.system(size: 32, weight: .medium)).padding(10)
                 Picker("運転モード", selection: $mode) { Text("自動").tag(1); Text("冷房").tag(2); Text("除湿").tag(3); Text("送風").tag(4); Text("暖房").tag(5) }.pickerStyle(.segmented)
@@ -188,6 +189,39 @@ struct DeviceControlView: View {
             }
             if pages > 1 { HStack { Button("前へ") { customPage = max(0, current - 1) }.disabled(current == 0); Spacer(); Text("\(current + 1) / \(pages)"); Spacer(); Button("次へ") { customPage = min(pages - 1, current + 1) }.disabled(current == pages - 1) }.frame(height: 44) }
             Text("ボタンを長押しすると一覧から削除できます。").font(.caption).foregroundColor(.secondaryInk)
+        }
+    }
+}
+
+// Filled mint = ON, outlined gray = OFF, question mark = unknown.
+struct PowerStateIcon: View {
+    let value: Bool?
+    var body: some View {
+        Image(systemName: value == nil ? "questionmark.circle" : value == true ? "power.circle.fill" : "power.circle")
+            .font(.system(size:22,weight:.medium))
+            .foregroundColor(value == true ? .mint : .secondaryInk)
+            .accessibilityLabel(value == nil ? "電源状態不明" : value == true ? "現在オン" : "現在オフ")
+    }
+}
+
+struct AirStateView: View {
+    @ObservedObject var devices: DeviceStore
+    let device: SBDevice
+    var body: some View {
+        let command = devices.demo ? nil : devices.airCommands[device.id]
+        VStack(alignment:.leading,spacing:2) {
+            HStack(spacing:5) {
+                PowerStateIcon(value: command?.power == "on" ? true : command?.power == "off" ? false : nil)
+                Text(device.name).font(.system(size:14,weight:.medium)).lineLimit(1)
+                Text(command.map { "送信済：" + ($0.power == "on" ? "ON" : $0.power == "off" ? "OFF" : "不明") } ?? "状態不明")
+                    .font(.system(size:12)).foregroundColor(.secondaryInk)
+            }
+            if let command = command, command.power == "on" {
+                Text(command.summary.replacingOccurrences(of:"ON · ",with:""))
+                    .font(.system(size:14)).foregroundColor(.mint).lineLimit(1).minimumScaleFactor(0.75)
+            }
+            Text(command.map { "実状態は取得不可 · " + $0.updated.formatted(date:.abbreviated,time:.shortened) + "送信" } ?? "赤外線 · 実状態は取得不可／このアプリから未送信")
+                .font(.system(size:10)).foregroundColor(.secondaryInk).lineLimit(1).minimumScaleFactor(0.7)
         }
     }
 }

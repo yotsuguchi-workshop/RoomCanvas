@@ -72,6 +72,21 @@ import CryptoKit
   precondition(remote.receive(manufacturer:"690900000000000003E00101",service:"62206400") == nil)
   print("PASS: generic/text webhook payload, HTTPS validation, auth, response handling, BLE baseline/duplicate/button detection")
   let device = SBDevice(id:"test-plug",name:"Test",type:"Plug Mini (JP)",infrared:false,cloud:true)
+  let displayStore = DeviceStore(demoOverride:false)
+  displayStore.devices = [device]
+  let checkedAt = Date()
+  displayStore.states[device.id] = SBStatus(power:"on",updated:checkedAt)
+  precondition(displayStore.powerState(device.id,now:checkedAt) == true)
+  precondition(displayStore.powerState(device.id,now:checkedAt.addingTimeInterval(181)) == nil)
+  displayStore.states[device.id] = SBStatus(power:"off",updated:checkedAt)
+  precondition(displayStore.powerState(device.id,now:checkedAt) == false)
+  displayStore.errors[device.id] = "offline"
+  precondition(displayStore.powerState(device.id,now:checkedAt) == nil)
+  precondition(displayStore.powerState("missing") == nil)
+  precondition(AirCommand(temperature:25,mode:2,fan:3,power:"off").summary == "OFF")
+  precondition(AirCommand(temperature:25,mode:2,fan:3,power:"on").summary == "ON · 冷房 25°C · 風量中")
+  precondition(AirCommand().summary == "状態不明")
+  print("PASS: power display on/off, stale/offline/missing unknown; AC settings shown only for ON")
   for power in ["on","off","unknown","fail"] {
     var posts: [[String:String]] = []; var gets = 0
     let sut = DeviceStore(demoOverride:false,api: { _,method,body in
