@@ -1,0 +1,17 @@
+import AppKit
+let size = NSSize(width:1024,height:1024)
+let image = NSImage(size:size)
+image.lockFocus()
+NSColor(calibratedRed:0.055,green:0.085,blue:0.12,alpha:1).setFill()
+NSBezierPath(rect:NSRect(origin:.zero,size:size)).fill()
+NSColor(calibratedRed:0.59,green:0.85,blue:0.74,alpha:1).setFill()
+NSBezierPath(roundedRect:NSRect(x:170,y:210,width:310,height:600),xRadius:65,yRadius:65).fill()
+NSColor(calibratedRed:0.94,green:0.79,blue:0.56,alpha:1).setFill()
+NSBezierPath(roundedRect:NSRect(x:520,y:510,width:330,height:300),xRadius:65,yRadius:65).fill()
+NSColor(calibratedRed:0.19,green:0.26,blue:0.31,alpha:1).setFill()
+NSBezierPath(roundedRect:NSRect(x:520,y:210,width:330,height:255),xRadius:65,yRadius:65).fill()
+NSColor(calibratedRed:0.055,green:0.085,blue:0.12,alpha:1).setStroke()
+let hands=NSBezierPath();hands.lineWidth=22;hands.lineCapStyle = .round; hands.move(to:NSPoint(x:685,y:745));hands.line(to:NSPoint(x:685,y:660));hands.line(to:NSPoint(x:755,y:620));hands.stroke()
+image.unlockFocus()
+let rep=NSBitmapImageRep(data:image.tiffRepresentation!)!
+try rep.representation(using:.png,properties:[:])!.write(to:URL(fileURLWithPath:CommandLine.arguments[1]))
