@@ -134,11 +134,11 @@ struct Dashboard: View {
     private var clockWeatherCard: some View {
         Card(fill:true) {
             VStack(alignment:.leading,spacing:6) {
-                TimelineView(.periodic(from:.now,by:1)) { time in
+                DeviceClockView { now in
                     Button { detail = .clock } label: {
                         VStack(alignment:.leading,spacing:3) {
-                            Text(time.date.formatted(.dateTime.month().day().weekday(.wide).locale(Locale(identifier:"ja_JP")))).font(.system(size:20)).foregroundColor(holidays.color(time.date))
-                            Text(RoomCalendar.clock(time.date)).font(.system(size:68,weight:.light,design:.rounded)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+                            Text(now.formatted(.dateTime.month().day().weekday(.wide).locale(Locale(identifier:"ja_JP")))).font(.system(size:20)).foregroundColor(holidays.color(now))
+                            Text(RoomCalendar.clock(now)).font(.system(size:68,weight:.light,design:.rounded)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
                         }.frame(maxWidth:.infinity,alignment:.leading)
                     }.buttonStyle(.plain)
                 }
@@ -193,8 +193,8 @@ struct Dashboard: View {
                     VStack(alignment:.leading,spacing:12) {
                         Text("ご用の方はこちらから").font(.title2.bold())
                         Spacer(minLength:0)
-                        TimelineView(.periodic(from:.now,by:1)) { time in
-                            let remaining = max(0,30-Int(time.date.timeIntervalSince(store.lastCall ?? .distantPast)))
+                        DeviceClockView { now in
+                            let remaining = max(0,30-Int(now.timeIntervalSince(store.lastCall ?? .distantPast)))
                             Button { Task { await store.call(room:room) } } label: { Label(store.calling ? "送信中…" : remaining > 0 ? "あと\(remaining)秒":"呼び出す",systemImage:"bell.badge").font(.title2.bold()).frame(maxWidth:.infinity,minHeight:66).background(Color.mint).foregroundColor(.canvas).cornerRadius(16) }.disabled(store.calling || remaining > 0)
                         }
                         Text(store.callMessage.isEmpty ? "部屋名・呼び出し時刻を通知先へ送信":store.callMessage).font(.footnote).foregroundColor(.secondaryInk).lineLimit(3)
@@ -225,6 +225,30 @@ struct WeatherSummary: View {
         }.frame(maxWidth:.infinity,alignment:.leading).frame(minHeight:62)
     }
 }
+// Read the device wall clock on every update; never accumulate elapsed seconds.
+struct DeviceClockView<Content: View>: View {
+    @Environment(\.scenePhase) private var phase
+    @State private var now = Date()
+    let content: (Date) -> Content
+    init(@ViewBuilder content: @escaping (Date) -> Content) { self.content = content }
+
+    var body: some View {
+        content(now)
+            .task(id: phase) {
+                guard phase == .active else { return }
+                while !Task.isCancelled {
+                    now = Date()
+                    let delay = RoomCalendar.nextClockDelay(after: Date())
+                    do { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+                    catch { return }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                now = Date()
+            }
+    }
+}
+
 struct ClockScreen: View {
     let room:String; let availability:String
     @ObservedObject var holidays:HolidayStore
@@ -233,10 +257,10 @@ struct ClockScreen: View {
         VStack(spacing:20) {
             HStack { Text(room); Spacer(); Text(availability).foregroundColor(.mint); BatteryIndicator() }.font(.title2)
             Spacer()
-            TimelineView(.periodic(from:.now,by:1)) { time in
+            DeviceClockView { now in
                 VStack(spacing:16) {
-                    Text(time.date.formatted(.dateTime.year().month().day().weekday(.wide).locale(Locale(identifier:"ja_JP")))).font(.system(size:30)).foregroundColor(holidays.color(time.date))
-                    Text(RoomCalendar.clock(time.date)).font(.system(size:area.size.width*0.15,weight:.ultraLight,design:.rounded)).monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                    Text(now.formatted(.dateTime.year().month().day().weekday(.wide).locale(Locale(identifier:"ja_JP")))).font(.system(size:30)).foregroundColor(holidays.color(now))
+                    Text(RoomCalendar.clock(now)).font(.system(size:area.size.width*0.15,weight:.ultraLight,design:.rounded)).monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                 }
             }
             Spacer(); Button("閉じる") { dismiss() }.padding(16).background(Color.panel).cornerRadius(12)

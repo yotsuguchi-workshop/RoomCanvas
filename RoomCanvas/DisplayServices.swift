@@ -3,6 +3,11 @@ import CoreLocation
 
 // Keep all date screens on one Gregorian, Sunday-first calendar.
 enum RoomCalendar {
+    // A small margin avoids displaying the previous second due to early wake-up.
+    static func nextClockDelay(after date: Date) -> TimeInterval {
+        let seconds = date.timeIntervalSince1970
+        return floor(seconds) + 1.01 - seconds
+    }
     static var value: Calendar { var c = Calendar(identifier: .gregorian); c.locale = Locale(identifier: "ja_JP"); c.timeZone = .current; c.firstWeekday = 1; return c }
     static func key(_ date: Date) -> String { let c = value.dateComponents([.year,.month,.day], from: date); return String(format: "%04d-%02d-%02d", c.year!,c.month!,c.day!) }
     static func clock(_ date: Date) -> String { let c = value.dateComponents([.hour,.minute,.second], from: date); return String(format: "%@%d:%02d:%02d", c.hour! < 12 ? "午前" : "午後", c.hour! % 12 == 0 ? 12 : c.hour! % 12, c.minute!, c.second!) }

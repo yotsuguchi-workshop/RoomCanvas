@@ -17,6 +17,11 @@ import CryptoKit
   let digest = HMAC<SHA256>.authenticationCode(for: Data("Hi There".utf8), using: key).map { String(format:"%02x", $0) }.joined()
   precondition(digest == "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7")
   func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int = 0, _ minute: Int = 0) -> Date { RoomCalendar.value.date(from: DateComponents(year:year,month:month,day:day,hour:hour,minute:minute))! }
+  for instant in [0.0, 0.25, 0.999, 59.999, 86400.7, -0.25] {
+   let delay = RoomCalendar.nextClockDelay(after: Date(timeIntervalSince1970: instant))
+   precondition(delay > 0 && delay <= 1.011)
+   precondition(abs(instant + delay - (floor(instant) + 1.01)) < 0.00001)
+  }
   precondition(RoomCalendar.clock(date(2026,9,19,0,5)) == "午前12:05:00")
   precondition(RoomCalendar.clock(date(2026,9,19,12,25)) == "午後12:25:00")
   precondition(RoomCalendar.clock(date(2026,9,19,22,5)) == "午後10:05:00")

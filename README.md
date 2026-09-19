@@ -63,7 +63,7 @@ ROOMCANVAS_TEAM_ID=YOURTEAMID ./scripts/build-installer.command
 
 チェックにはmacOSのXcode Command Line ToolsとPython 3が必要です。インストーラは`Installer/RoomCanvas.ipa`へ生成します。署名付きIPA、プロファイル、実機ログ、個人情報を含むスクリーンショットはGitに含めません。署名済みIPAを誰のiPadにも入れられるわけではありません。
 
-バージョン：0.10.1。通知形式のテスト、実機向けReleaseビルドを実施。Discord以外の各社サービスへの実配信は利用先ごとに確認してください。
+バージョン：0.10.2。通知形式のテスト、実機向けReleaseビルドを実施。Discord以外の各社サービスへの実配信は利用先ごとに確認してください。
 
 ## ライセンス
 
